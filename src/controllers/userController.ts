@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { userRepository } from "../repositories/userRepositories";
 
 class UserController {
-
   async getAllUsers(req: Request, res: Response) {
     try {
       const allUsers = await userRepository.find();
