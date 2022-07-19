@@ -1,11 +1,48 @@
 import { Request, Response } from "express";
-import { userRepository } from "../repositories/userRepositories";
+import { userRepository } from "../repositories/repositories";
+import { User } from "../entity/User";
 
 class UserController {
   async getAllUsers(req: Request, res: Response) {
     try {
-      const allUsers = await userRepository.find();
+      const allUsers = await userRepository.find({
+        relations: {
+          posts: true,
+        },
+      });
+      allUsers.map(
+        (user) =>
+          delete user.accessToken &&
+          delete user.password &&
+          delete user.refreshToken &&
+          delete user.hashPassword
+      );
       res.json(allUsers);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async getUserbyEmail(req: Request, res: Response) {
+    try {
+      const { email } = req.query;
+
+      const user = await userRepository.findOne({
+        where: { email: `${email}` },
+        relations: {
+          posts: true,
+        },
+      });
+
+      const prop = ["accessToken", "password", "refreshToken", "hashPassword"];
+      const responseUser = Object.keys(user).reduce((object, key) => {
+        if (!prop.includes(key)) {
+          object[key] = user[key];
+        }
+        return object;
+      }, {});
+
+      res.json(responseUser);
     } catch (error) {
       console.error(error);
     }
@@ -13,28 +50,15 @@ class UserController {
 
   async createUser(req: Request, res: Response) {
     try {
-      const user = await userRepository.create(req.body);
-      const results = await userRepository.save(user);
-      res.json(results);
+      const { email, password } = req.body;
+      const user = new User(email, password);
+      user.hashPassword();
+      await userRepository.save(user);
+
+      res.status(200).send("Everything is Ok");
     } catch (error) {
       console.error(error);
       res.json({ error: `${error.detail}` });
-    }
-  }
-
-  async checkUser(req: Request, res: Response) {
-    try {
-      const { email, password } = req.body;
-      const checkedUser = await userRepository.find({
-        where: {
-          email,
-          password,
-        },
-      });
-
-      res.json(checkedUser);
-    } catch (error) {
-      console.error(error);
     }
   }
 
@@ -45,7 +69,7 @@ class UserController {
         email,
       });
 
-      res.json(`Count of deleted users: ${deletedUser.affected}`);
+      res.json({ message: `Count of deleted users: ${deletedUser.affected}` });
     } catch (error) {
       console.error(error);
     }
@@ -58,8 +82,9 @@ class UserController {
       });
 
       userRepository.merge(user, req.body);
-      const results = await userRepository.save(user);
-      return res.send(results);
+      await userRepository.save(user);
+
+      res.status(200).send("Everything is Ok");
     } catch (error) {
       console.error(error);
     }
