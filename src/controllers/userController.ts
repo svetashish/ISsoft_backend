@@ -1,6 +1,14 @@
 import { Request, Response } from "express";
 import { userRepository } from "../repositories/repositories";
 import { User } from "../entity/User";
+import { responseUserObject } from "../helpers/resporceUser";
+
+const deletedProps = [
+  "accessToken",
+  "password",
+  "refreshToken",
+  "hashPassword",
+];
 
 class UserController {
   async getAllUsers(req: Request, res: Response) {
@@ -10,14 +18,10 @@ class UserController {
           posts: true,
         },
       });
-      allUsers.map(
-        (user) =>
-          delete user.accessToken &&
-          delete user.password &&
-          delete user.refreshToken &&
-          delete user.hashPassword
+      const result = allUsers.map((user) =>
+        responseUserObject(user, deletedProps)
       );
-      res.json(allUsers);
+      res.json(result);
     } catch (error) {
       console.error(error);
     }
@@ -34,14 +38,12 @@ class UserController {
         },
       });
 
-      const prop = ["accessToken", "password", "refreshToken", "hashPassword"];
-      const responseUser = Object.keys(user).reduce((object, key) => {
-        if (!prop.includes(key)) {
-          object[key] = user[key];
-        }
-        return object;
-      }, {});
+      if (!user) {
+        res.status(404).send("Email not found");
+        return;
+      }
 
+      const responseUser = responseUserObject(user, deletedProps);
       res.json(responseUser);
     } catch (error) {
       console.error(error);
@@ -80,6 +82,11 @@ class UserController {
       const user = await userRepository.findOneBy({
         email: req.body.email,
       });
+
+      if (!user) {
+        res.status(404).send("Email not found");
+        return;
+      }
 
       userRepository.merge(user, req.body);
       await userRepository.save(user);

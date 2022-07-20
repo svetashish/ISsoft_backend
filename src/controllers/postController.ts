@@ -7,6 +7,11 @@ class PostController {
     try {
       const { title, description, email } = req.body;
       const user = await userRepository.findOneBy({ email });
+
+      if (!user) {
+        res.status(404).send("Email not found");
+        return;
+      }
       const post = new Post(title, description, user.id);
       await postRepository.save(post);
 

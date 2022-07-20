@@ -10,5 +10,4 @@ router.get("/users/getUser", userController.getUserbyEmail);
 router.delete("/user/delete", checkJwt, userController.deleteUser);
 router.put("/user/update", checkJwt,  userController.updateData);
 
-
 export default router;
